@@ -5,3 +5,7 @@
 ```
 git clone https://chromium.googlesource.com/libyuv/libyuv
 ```
+
+> 该项目参考github 
+> https://github.com/hzl123456/LibyuvDemo  
+> https://github.com/eterrao/AndroidLibyuvImageUtils
