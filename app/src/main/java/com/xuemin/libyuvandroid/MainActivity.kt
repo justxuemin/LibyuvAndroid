@@ -1,40 +1,36 @@
 package com.xuemin.libyuvandroid
 
-import android.graphics.*
-import android.net.Uri
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.widget.ImageView
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
-import com.xuemin.libyuv.utils.YUVUtil
-import java.io.File
-import java.io.FileOutputStream
-import java.nio.ByteBuffer
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(),Constant {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        initBtn()
+    }
 
-        val imageView: ImageView = findViewById<ImageView>(R.id.result)
-        val bitmap = BitmapFactory.decodeResource(resources, R.drawable.test)
-        val yuv = ByteArray(bitmap.width * bitmap.height * 3 / 2)
-        val argb = ByteArray(bitmap.width * bitmap.height * 4)
-        val startTime = System.currentTimeMillis()
-        val result = YUVUtil.bitmapToYuv(bitmap, argb)
-        Log.e("xuemin", "coast time : " + (System.currentTimeMillis() - startTime) + ", result : " + result)
-//        val yuvImage = YuvImage(yuv, ImageFormat.NV21, bitmap.width, bitmap.height, null)
-        val file = File("/sdcard/result.jpeg")
-        val fos = FileOutputStream(file)
-        val resultBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888);
-        val byteBuffer = ByteBuffer.wrap(argb, 0, argb.size)
-        resultBitmap.copyPixelsFromBuffer(byteBuffer)
-        imageView.setImageBitmap(resultBitmap)
-//        resultBitmap.copyPixelsToBuffer()
-//        yuvImage.compressToJpeg(Rect(0, 0, bitmap.width, bitmap.height), 100, fos)
-//        fos.close()
-//        imageView.setImageURI(Uri.fromFile(file))
+    private fun initBtn() {
+        val imageBtn = findViewById<Button>(R.id.image)
+        val cameraBtn = findViewById<Button>(R.id.camera)
+        imageBtn.setText("ImageActivity")
+        imageBtn.setOnClickListener{
+            val intent = Intent()
+            intent.setClass(this, ImageActivity::class.java)
+            startActivity(intent)
+            Log.v(TAG, "[MainActivity] start ImageActivity")
+        }
+        cameraBtn.setText("CameraActivity")
+        cameraBtn.setOnClickListener {
+            val intent = Intent()
+            intent.setClass(this, CameraActivity::class.java)
+            startActivity(intent)
+            Log.v(TAG, "[MainActivity] start CameraActivity")
+        }
     }
 }

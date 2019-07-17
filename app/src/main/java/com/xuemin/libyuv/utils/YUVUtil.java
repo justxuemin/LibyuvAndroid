@@ -8,6 +8,6 @@ public class YUVUtil {
         System.loadLibrary("yuvutil");
     }
 
-    public static native void android420ToI420(byte[] src, int srcWidth, int srcHeight, byte[] des, int desWidth, int desHeight);
-    public static native int bitmapToYuv(Bitmap bitmap, byte[] des);
+    public static native void yuvToARGB(byte[] src, int srcWidth, int srcHeight, byte[] des);
+    public static native int bitmapToYuvToARGB(Bitmap bitmap, byte[] des);
 }

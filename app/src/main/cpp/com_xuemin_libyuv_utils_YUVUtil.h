@@ -12,15 +12,15 @@ extern "C" {
  * Method:    android420ToI420
  * Signature: ([BII[BII)V
  */
-JNIEXPORT void JNICALL Java_com_xuemin_libyuv_utils_YUVUtil_android420ToI420
-  (JNIEnv *, jclass, jbyteArray, jint, jint, jbyteArray, jint, jint);
+JNIEXPORT void JNICALL Java_com_xuemin_libyuv_utils_YUVUtil_yuvToARGB
+  (JNIEnv *, jclass, jbyteArray, jint, jint, jbyteArray);
 
 /*
  * Class:     com_xuemin_libyuv_utils_YUVUtil
  * Method:    rgbaToYuv
  * Signature: ([BII[BII)V
  */
-JNIEXPORT int JNICALL Java_com_xuemin_libyuv_utils_YUVUtil_bitmapToYuv
+JNIEXPORT int JNICALL Java_com_xuemin_libyuv_utils_YUVUtil_bitmapToYuvToARGB
   (JNIEnv *, jclass, jobject bitmapObj, jbyteArray des);
 
 #ifdef __cplusplus

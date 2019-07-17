@@ -12,96 +12,48 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR,TAG ,__VA_ARGS__) // 定义LOGE类型
 #define LOGF(...) __android_log_print(ANDROID_LOG_FATAL,TAG ,__VA_ARGS__) // 定义LOGF类型
 
-static jbyte *convertData;
-static jbyte *rotateData;
 
-void init(jint width, jint height, jint desWidth, jint desHeight) {
-    convertData = (jbyte *)malloc(sizeof(jbyte) * width * height * 3 / 2);
-    rotateData = (jbyte *)malloc(sizeof(jbyte) * desWidth * desHeight * 3 / 2);
-}
-
-
-void JNI_OnUnload(JavaVM *jvm, void *reserved) {
-    free(convertData);
-    free(rotateData);
-}
-
-
-JNIEXPORT void JNICALL Java_com_xuemin_libyuv_utils_YUVUtil_android420ToI420
-        (JNIEnv * env, jclass type, jbyteArray src, jint srcWidth, jint srcHeight, jbyteArray des, jint desWidth, jint desHeight) {
+JNIEXPORT void JNICALL Java_com_xuemin_libyuv_utils_YUVUtil_yuvToARGB
+        (JNIEnv * env, jclass type, jbyteArray src, jint srcWidth, jint srcHeight, jbyteArray des) {
     jbyte * srcArray = env->GetByteArrayElements(src, nullptr);
     jbyte * desArray = env->GetByteArrayElements(des, nullptr);
 
-    // 源数据
-    jint srcYSize = srcWidth * srcHeight;
-    jint srcUSize = (srcWidth >> 1) * (srcHeight >> 1);
-    jint srcVSize = srcUSize;
-
     jbyte * srcY = srcArray;
-    jbyte * srcU = srcArray + srcYSize;
-    jbyte * srcV = srcArray + srcYSize + srcUSize;
+    jbyte * srcU = srcArray + (srcWidth * srcHeight) * sizeof(jbyte);
+    jbyte * srcV = srcArray + (srcWidth * srcHeight) * sizeof(jbyte) + (srcWidth * srcHeight) / 4 * sizeof(jbyte);
 
-    // 目标数据
-    jint desYSize = desWidth * desHeight;
-    jint desUSize = (desWidth >> 1) * (desHeight >> 1);
-    jint desVSize = desUSize;
+    jbyte * convertData = static_cast<jbyte *>(malloc(sizeof(jbyte) * srcWidth * srcHeight * 3 / 2));
+    jbyte * convertY = convertData;
+    jbyte * convertU = convertData + (srcWidth * srcHeight) * sizeof(jbyte);
+    jbyte * convertV = convertData + (srcWidth * srcHeight) * sizeof(jbyte) + (srcWidth * srcHeight) / 4 * sizeof(jbyte);
+    libyuv::Android420ToI420(reinterpret_cast<const uint8_t *>(srcY), srcWidth, reinterpret_cast<const uint8_t *>(srcU), srcWidth / 2,
+                             reinterpret_cast<const uint8_t *>(srcV), srcWidth / 2, 1,
+                             reinterpret_cast<uint8_t *>(convertY), srcWidth, reinterpret_cast<uint8_t *>(convertU), srcWidth / 2,
+                             reinterpret_cast<uint8_t *>(convertV), srcWidth / 2, srcWidth, srcHeight);
 
+    jbyte * rotateData = static_cast<jbyte *>(malloc((sizeof(jbyte)) * srcWidth * srcHeight * 3 / 2));
+    jbyte * rotateY = rotateData;
+    jbyte * rotateU = rotateData + (srcWidth * srcHeight) * sizeof(jbyte);
+    jbyte * rotateV = rotateData + (srcWidth * srcHeight) * sizeof(jbyte) + (srcWidth * srcHeight) / 4 * sizeof(jbyte);
 
-    jbyte * desY = desArray;
-    jbyte * desU = desArray + desYSize;
-    jbyte * desV = desArray + desYSize + desUSize;
+    libyuv::I420Rotate(reinterpret_cast<const uint8_t *>(convertY), srcWidth,
+                       reinterpret_cast<const uint8_t *>(convertU), srcWidth / 2,
+                       reinterpret_cast<const uint8_t *>(convertV), srcWidth / 2,
+                       reinterpret_cast<uint8_t *>(rotateY), srcHeight, reinterpret_cast<uint8_t *>(rotateU), srcHeight / 2,
+                       reinterpret_cast<uint8_t *>(rotateV), srcHeight/ 2, srcWidth, srcHeight, libyuv::kRotate90);
 
+    libyuv::ConvertFromI420(reinterpret_cast<const uint8_t *>(rotateY), srcHeight,
+                            reinterpret_cast<const uint8_t *>(rotateU), srcHeight / 2,
+                            reinterpret_cast<const uint8_t *>(rotateV), srcHeight / 2,
+                            reinterpret_cast<uint8_t *>(desArray), 0, srcHeight, srcWidth, libyuv::FOURCC_ARGB);
 
-    // 临时数据
-    init(srcWidth, srcHeight, desWidth, desHeight);
-    jbyte * convertDesY = convertData;
-    jbyte * convertDesU = convertData + srcYSize;
-    jbyte * convertDesV = convertData + srcYSize + srcUSize;
-
-    libyuv::Android420ToI420(reinterpret_cast<const uint8_t *>(srcY), srcYSize, reinterpret_cast<const uint8_t *>(srcU), srcUSize,
-                             reinterpret_cast<const uint8_t *>(srcV), srcVSize,
-                             1, reinterpret_cast<uint8_t *>(convertDesY), srcYSize,
-                             reinterpret_cast<uint8_t *>(convertDesU), srcUSize,
-                             reinterpret_cast<uint8_t *>(convertDesV), srcVSize, srcWidth, srcHeight);
-    /*
-     * int I420Rotate(const uint8_t* src_y,
-       int src_stride_y,
-       const uint8_t* src_u,
-       int src_stride_u,
-       const uint8_t* src_v,
-       int src_stride_v,
-       uint8_t* dst_y,
-       int dst_stride_y,
-       uint8_t* dst_u,
-       int dst_stride_u,
-       uint8_t* dst_v,
-       int dst_stride_v,
-       int width,
-       int height,
-       enum RotationMode mode);
-     */
-    jbyte * rotateDesY = rotateData;
-    jbyte * rotateDesU = rotateData + srcYSize;
-    jbyte * rotateDesV = rotateData + srcVSize;
-
-    libyuv::I420Rotate(reinterpret_cast<const uint8_t *>(convertDesY), srcYSize,
-                       reinterpret_cast<const uint8_t *>(convertDesU), srcUSize,
-                       reinterpret_cast<const uint8_t *>(convertDesV), srcVSize,
-                       reinterpret_cast<uint8_t *>(rotateDesY), srcYSize, reinterpret_cast<uint8_t *>(rotateDesU), srcUSize,
-                       reinterpret_cast<uint8_t *>(rotateDesV), srcVSize, srcWidth, srcHeight,
-                       libyuv::kRotate90);
-
-
-    libyuv::ConvertFromI420(reinterpret_cast<const uint8_t *>(rotateDesY), srcYSize,
-                            reinterpret_cast<const uint8_t *>(rotateDesU), srcUSize,
-                            reinterpret_cast<const uint8_t *>(rotateDesV), srcVSize,
-                            reinterpret_cast<uint8_t *>(desArray), desYSize, desWidth, desHeight, libyuv::FOURCC_YV12);
-
+    free(convertData);
+    free(rotateData);
     env->ReleaseByteArrayElements(src, srcArray, 0);
     env->ReleaseByteArrayElements(des, desArray, 0);
 }
 
-JNIEXPORT jint JNICALL Java_com_xuemin_libyuv_utils_YUVUtil_bitmapToYuv
+JNIEXPORT jint JNICALL Java_com_xuemin_libyuv_utils_YUVUtil_bitmapToYuvToARGB
         (JNIEnv *env, jclass type, jobject bitmapObj, jbyteArray des) {
 
     jbyte * desArray = env->GetByteArrayElements(des, nullptr);
@@ -142,13 +94,25 @@ JNIEXPORT jint JNICALL Java_com_xuemin_libyuv_utils_YUVUtil_bitmapToYuv
                        reinterpret_cast<uint8_t *>(convertY), bitmapInfo.width, reinterpret_cast<uint8_t *>(convertU), bitmapInfo.width / 2,
                        reinterpret_cast<uint8_t *>(convertV), bitmapInfo.width / 2, bitmapInfo.width, bitmapInfo.height);
 
-    libyuv::ConvertFromI420(reinterpret_cast<const uint8_t *>(convertY), bitmapInfo.width,
-                            reinterpret_cast<const uint8_t *>(convertU), bitmapInfo.width / 2,
-                            reinterpret_cast<const uint8_t *>(convertV), bitmapInfo.width / 2,
-                            reinterpret_cast<uint8_t *>(desArray), 0, bitmapInfo.width, bitmapInfo.height, libyuv::FOURCC_ARGB);
+    jbyte * rotateData = static_cast<jbyte *>(malloc((sizeof(jbyte)) * bitmapInfo.width * bitmapInfo.height * 3 / 2));
+    jbyte * rotateY = rotateData;
+    jbyte * rotateU = rotateData + (bitmapInfo.width * bitmapInfo.height) * sizeof(jbyte);
+    jbyte * rotateV = rotateData + (bitmapInfo.width * bitmapInfo.height) * sizeof(jbyte) + (bitmapInfo.width * bitmapInfo.height) / 4 * sizeof(jbyte);
+
+    libyuv::I420Rotate(reinterpret_cast<const uint8_t *>(convertY), bitmapInfo.width,
+                       reinterpret_cast<const uint8_t *>(convertU), bitmapInfo.width / 2,
+                       reinterpret_cast<const uint8_t *>(convertV), bitmapInfo.width / 2,
+                       reinterpret_cast<uint8_t *>(rotateY), bitmapInfo.height, reinterpret_cast<uint8_t *>(rotateU), bitmapInfo.height / 2,
+                       reinterpret_cast<uint8_t *>(rotateV), bitmapInfo.height / 2, bitmapInfo.width, bitmapInfo.height, libyuv::kRotate90);
+
+    libyuv::ConvertFromI420(reinterpret_cast<const uint8_t *>(rotateY), bitmapInfo.height,
+                            reinterpret_cast<const uint8_t *>(rotateU), bitmapInfo.height / 2,
+                            reinterpret_cast<const uint8_t *>(rotateV), bitmapInfo.height / 2,
+                            reinterpret_cast<uint8_t *>(desArray), 0, bitmapInfo.height, bitmapInfo.width, libyuv::FOURCC_ARGB);
 
     AndroidBitmap_unlockPixels(env, bitmapObj);
     env->ReleaseByteArrayElements(des, desArray, 0);
     free(convertData);
+    free(rotateData);
     return 0;
 }
